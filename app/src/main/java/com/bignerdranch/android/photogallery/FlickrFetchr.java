@@ -1,10 +1,19 @@
 package com.bignerdranch.android.photogallery;
 
+import android.net.Uri;
+import android.util.Log;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Created by Daniel on 12/22/2015.
@@ -12,6 +21,8 @@ import java.net.URL;
  */
 public class FlickrFetchr {
 
+    private static final String TAG = "FlickrFetchr";
+    private static final String API_KEY = "f55905acfce160a08a05c0d94a1d2961";
     /** Step 1
      * Gets Url results in form of Bytes
      * @param urlSpec URL
@@ -53,4 +64,58 @@ public class FlickrFetchr {
         return new String(getUrlBytes(urlSpec));
     }
 
+    /** Step 3
+     *  Build the Url then pass it over to parse the data into JSON
+     * @return
+     */
+    public List<GalleryItem> fetchItems() {
+
+        List<GalleryItem> items = new ArrayList<>();
+
+        try {
+            //3.1 Use Uri.Builder to build url
+            String url = Uri.parse("https://api.flickr.com/services/rest/")
+                    .buildUpon()
+                    .appendQueryParameter("method", "flickr.photos.getRecent")
+                    .appendQueryParameter("api_key", API_KEY)
+                    .appendQueryParameter("format", "json")
+                    .appendQueryParameter("nojsoncallback", "1")
+                    .appendQueryParameter("extras", "url_s")
+                    .build().toString();
+            String jsonString = getUrlString(url);
+            Log.i(TAG, "Received JSON: " + jsonString);
+
+            //3.2 Make JSON Object to a url
+            JSONObject jsonBody = new JSONObject(jsonString);
+            parseItem(items, jsonBody);
+
+        } catch (IOException ioe) {
+            Log.e(TAG, "Failed to fetch items");
+        } catch (JSONException je) {
+            Log.e(TAG, "Failed to Parse JSON", je);
+        }
+        return items;
+    }
+
+    /** Step 4
+     * Parse the JSON data
+     */
+    private void parseItem(List<GalleryItem> items, JSONObject jsonBody) throws IOException, JSONException {
+
+        JSONObject photosJsonObject = jsonBody.getJSONObject("photos");
+        JSONArray photoJsonArray = photosJsonObject.getJSONArray("photo");
+        //4.1 Traverse JSON Array extracting needed data
+        for (int i = 0; i < photoJsonArray.length(); i++) {
+            JSONObject photoJsonObject = photoJsonArray.getJSONObject(i);
+            //4.2 Assign data to items
+            GalleryItem item = new GalleryItem();
+            item.setId(photoJsonObject.getString("id"));
+            item.setCaption((photoJsonObject.getString("title")));
+            if (!photoJsonObject.has("url_s"))
+                continue;
+            item.setUrl(photoJsonObject.getString("url_s"));
+            //4.3 Add item to list
+            items.add(item);
+        }
+    }
 }
