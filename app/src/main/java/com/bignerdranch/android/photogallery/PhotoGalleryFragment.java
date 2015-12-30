@@ -28,6 +28,7 @@ public class PhotoGalleryFragment extends Fragment{
 
     private RecyclerView mPhotoRecyclerView;
     private List<GalleryItem> mItems = new ArrayList<>();
+    //specify the target as to where the downloaded images might go
     private ThumbnailDownloader<PhotoHolder> mThumbnailDownloader;
 
     public static Fragment newInstance() {
@@ -42,9 +43,11 @@ public class PhotoGalleryFragment extends Fragment{
         //executes the AsyncMethod
         new FetchItemTask().execute();
 
+        //
         Handler responseHandler = new Handler();
         mThumbnailDownloader = new ThumbnailDownloader<>(responseHandler);
 
+        //once downloaded, get drawable and bind it to ViewHolder
         mThumbnailDownloader.setThumbnailDownloadListener(
                 new ThumbnailDownloader.ThumbnailDownloadListener<PhotoHolder>() {
             @Override
@@ -54,6 +57,7 @@ public class PhotoGalleryFragment extends Fragment{
             }
         });
 
+        //ensure call .start() before .getLooper()
         mThumbnailDownloader.start();
         mThumbnailDownloader.getLooper();
         Log.i(TAG, "Background thread started");
@@ -76,9 +80,11 @@ public class PhotoGalleryFragment extends Fragment{
         mThumbnailDownloader.clearQueue();
     }
 
+    //When application is destroyed, terminate thread
     @Override
     public void onDestroy() {
         super.onDestroy();
+        // .quit() terminates thread
         mThumbnailDownloader.quit();
         Log.i(TAG, "Background thread destroyed");
     }
@@ -133,7 +139,7 @@ public class PhotoGalleryFragment extends Fragment{
             GalleryItem galleryItem = mGalleryItems.get(position);
             Drawable placeholder = getResources().getDrawable(R.drawable.bill_up_close);
             holder.bindDrawable(placeholder);
-            //call threads queue
+            //call threads queue to pass target where image should be placed
             mThumbnailDownloader.queueThumbnail(holder, galleryItem.getUrl());
         }
 
