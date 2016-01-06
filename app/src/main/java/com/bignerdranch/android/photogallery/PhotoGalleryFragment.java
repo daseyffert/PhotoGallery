@@ -7,16 +7,18 @@ import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
 import android.support.v4.app.Fragment;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -40,10 +42,10 @@ public class PhotoGalleryFragment extends Fragment{
         super.onCreate(onSavedInstanceState);
 
         setRetainInstance(true);
+        setHasOptionsMenu(true);
         //executes the AsyncMethod
-        new FetchItemTask().execute();
+        new FetchItemsTask().execute();
 
-        //
         Handler responseHandler = new Handler();
         mThumbnailDownloader = new ThumbnailDownloader<>(responseHandler);
 
@@ -89,6 +91,13 @@ public class PhotoGalleryFragment extends Fragment{
         Log.i(TAG, "Background thread destroyed");
     }
 
+    @Override
+    public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
+        super.onCreateOptionsMenu(menu, inflater);
+
+        inflater.inflate(R.menu.fragment_photo_gallery, menu);
+    }
+
     private void setupAdapter() {
         if (isAdded()) {
             mPhotoRecyclerView.setAdapter(new PhotoAdapter(mItems));
@@ -100,7 +109,7 @@ public class PhotoGalleryFragment extends Fragment{
      */
     private static class PhotoHolder extends RecyclerView.ViewHolder {
 
-        private static ImageView mItemImageView;
+        private ImageView mItemImageView;
 
         public PhotoHolder(View itemView) {
             super(itemView);
@@ -108,7 +117,7 @@ public class PhotoGalleryFragment extends Fragment{
             mItemImageView = (ImageView) itemView.findViewById(R.id.gallery_item_image_view);
         }
 
-        public static void bindDrawable(Drawable drawable) {
+        public void bindDrawable(Drawable drawable) {
             mItemImageView.setImageDrawable(drawable);
         }
     }
@@ -137,8 +146,7 @@ public class PhotoGalleryFragment extends Fragment{
         @Override
         public void onBindViewHolder(PhotoHolder holder, int position) {
             GalleryItem galleryItem = mGalleryItems.get(position);
-            Drawable placeholder = getResources().getDrawable(R.drawable.bill_up_close);
-            holder.bindDrawable(placeholder);
+            holder.bindDrawable(ContextCompat.getDrawable(getContext(), R.drawable.bill_up_close));
             //call threads queue to pass target where image should be placed
             mThumbnailDownloader.queueThumbnail(holder, galleryItem.getUrl());
         }
@@ -152,7 +160,7 @@ public class PhotoGalleryFragment extends Fragment{
     /**
      * Fetch the images from the url in a separate thread
      */
-    private class FetchItemTask extends AsyncTask<Void, Void, List<GalleryItem>> {
+    private class FetchItemsTask extends AsyncTask<Void, Void, List<GalleryItem>> {
 
         @Override
         protected List<GalleryItem> doInBackground(Void... voids) {
@@ -166,7 +174,13 @@ public class PhotoGalleryFragment extends Fragment{
 //                Log.e(TAG, "Failed to fetch URL: ", ioe);
 //            }
             //extract data from Flickr
-            return new FlickrFetchr().fetchItems();
+            String query = "robot"; // testing purposes
+
+            if (query == null) {
+                return new FlickrFetchr().fetchRecentPhotos();
+            } else {
+                return new FlickrFetchr().searchPhotos(query);
+            }
         }
 
         @Override
