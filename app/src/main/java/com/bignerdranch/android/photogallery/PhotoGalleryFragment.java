@@ -1,5 +1,6 @@
 package com.bignerdranch.android.photogallery;
 
+import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
@@ -122,10 +123,17 @@ public class PhotoGalleryFragment extends Fragment{
         searchView.setOnSearchClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                String query = QueryPreferences.getStroredQuery(getActivity());
+                String query = QueryPreferences.getStoredQuery(getActivity());
                 searchView.setQuery(query, false);
             }
         });
+
+        //check the text and state of polling
+        MenuItem toggleItem = menu.findItem(R.id.menu_item_toggle_polling);
+        if (PollService.isServiceAlarmOn(getActivity()))
+            toggleItem.setTitle(R.string.stop_polling);
+        else
+            toggleItem.setTitle(R.string.start_polling);
     }
 
     @Override
@@ -135,13 +143,18 @@ public class PhotoGalleryFragment extends Fragment{
                 QueryPreferences.setStoredQuery(getActivity(), null);
                 updateItems();
                 return true;
+            case R.id.menu_item_toggle_polling:
+                boolean shouldStartAlarm = !PollService.isServiceAlarmOn(getActivity());
+                PollService.setServiceAlarm(getActivity(), shouldStartAlarm);
+                getActivity().invalidateOptionsMenu();
+                return true;
             default:
                 return super.onOptionsItemSelected(item);
         }
     }
 
     private void updateItems() {
-        String query = QueryPreferences.getStroredQuery(getActivity());
+        String query = QueryPreferences.getStoredQuery(getActivity());
         new FetchItemsTask(query).execute();
     }
 
